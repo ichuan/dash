@@ -47,7 +47,7 @@ export async function getAssertSupplyRateWithRetries(
   rpcs: string[],
   dataProvider: string,
   asset: string,
-  retries: number = 3
+  retries: number = 5
 ) {
   while (retries-- > 0) {
     let rpc = rpcs[Math.floor(rpcs.length * Math.random())];
