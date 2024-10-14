@@ -10,12 +10,12 @@
 
 // rpcs: https://chainlist.org/
 
-import { Web3 } from "web3";
-import { waitWithTimeout } from "web3-utils";
-import DATA_PROVIDER_ABI from "./abi/AaveProtocolDataProvider.json";
-import { AAVEDeployment, AAVEAssetName } from "./definitions";
-import { AAVEV3DeployedAddresses, CONTRACT_CALL_TIMEOUT } from "../consts";
-import HttpProvider from "web3-providers-http";
+import { Web3 } from 'web3';
+import { waitWithTimeout } from 'web3-utils';
+import POOL_ABI from './abi/Pool.json';
+import { AAVEDeployment, AAVEAssetName } from './definitions';
+import { AAVEV3DeployedAddresses, CONTRACT_CALL_TIMEOUT } from '../consts';
+import HttpProvider from 'web3-providers-http';
 
 // convert ray: 54748256964993253020798668n to float: 0.05479114662220088
 // by formula: ray/10**27 == float
@@ -32,14 +32,14 @@ export async function getAssetSupplyRate(
   asset: string
 ) {
   const web3 = new Web3(rpc);
-  const contract = new web3.eth.Contract(DATA_PROVIDER_ABI, dataProvider);
+  const contract = new web3.eth.Contract(POOL_ABI, dataProvider);
   // ret.liquidityRate == 54748256964993253020798668n
   const ret: any = await waitWithTimeout(
     contract.methods.getReserveData(asset).call(),
     CONTRACT_CALL_TIMEOUT
   );
   const seconds = 365 * 24 * 3600;
-  const rate = rayToFloat(ret.liquidityRate);
+  const rate = rayToFloat(ret.currentLiquidityRate);
   return (Math.pow(1 + rate / seconds, seconds) - 1).toFixed(4);
 }
 
@@ -59,7 +59,7 @@ export async function getAssertSupplyRateWithRetries(
       );
     }
   }
-  return "";
+  return '';
 }
 
 export async function getAllAssetSupplyRates() {
@@ -69,20 +69,16 @@ export async function getAllAssetSupplyRates() {
       return [
         d.chainName,
         assetName,
-        await getAssertSupplyRateWithRetries(
-          d.rpcs,
-          d.dataProvider,
-          d[assetName]
-        ),
+        await getAssertSupplyRateWithRetries(d.rpcs, d.pool, d[assetName]),
       ];
     };
   };
   for (const i of AAVEV3DeployedAddresses) {
-    promises.push(getCallback(i, "USDC"));
-    promises.push(getCallback(i, "USDT"));
+    promises.push(getCallback(i, 'USDC'));
+    promises.push(getCallback(i, 'USDT'));
   }
   const results = await Promise.allSettled(promises.map((i) => i()));
-  return results.filter((i) => i.status === "fulfilled").map((i) => i.value);
+  return results.filter((i) => i.status === 'fulfilled').map((i) => i.value);
 }
 
 // getAllAssetSupplyRates().then(console.dir);
